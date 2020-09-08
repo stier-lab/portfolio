@@ -1,0 +1,107 @@
+---
+title: "Time series analysis"
+subtitle: "⚔<br/>with ecofolio and MARSS"
+author: "Megsie Siple"
+institute: "Stier Lab @ ucsb"
+date: "2016/12/12 (updated: `r Sys.Date()`)"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+background-image: url(https://upload.wikimedia.org/wikipedia/commons/b/be/Sharingan_triple.svg)
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+```
+
+???
+
+Image credit: [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Sharingan_triple.svg)
+
+---
+class: center, middle
+
+# xaringan
+
+### /ʃaː.'riŋ.ɡan/
+
+---
+class: inverse, center, middle
+
+# Get Started
+
+---
+
+# Before we start
+
+Install the **ecofolio** package from [Github](https://github.com/seananderson/ecofolio):
+
+```{r eval=FALSE, tidy=FALSE}
+devtools::install_github("seananderson/ecofolio")
+```
+
+--
+
+You are recommended to use the [RStudio IDE](https://www.rstudio.com/products/rstudio/), but you do not have to.
+
+- Create a new R Markdown document from the menu `File -> New File -> R Markdown -> From Template -> Ninja Presentation`;<sup>1</sup>
+
+--
+
+- Click the `Knit` button to compile it;
+
+--
+
+- or use the [RStudio Addin](https://rstudio.github.io/rstudioaddins/)<sup>2</sup> "Infinite Moon Reader" to live preview the slides (every time you update and save the Rmd document, the slides will be automatically reloaded in RStudio Viewer.
+
+.footnote[
+[1] 中文用户请看[这份教程](http://slides.yihui.org/xaringan/zh-CN.html)
+
+[2] See [#2](https://github.com/yihui/xaringan/issues/2) if you do not see the template or addin in RStudio.
+]
+
+---
+
+# Refresher about time series
+
+There are some time series basics that it helps to know when you're analyzing time series data.
+
+These basics are all included in `stats` so you don't have to download a package. 
+
+--- 
+
+
+# Random walk
+
+Random walk models look like this:
+
+$$X_t = X_{t-1}+w_t$$
+
+In R code, this would look like the following:
+```{r}
+set.seed(123)
+TT <- 100
+xx <- ww <- rnorm(n = TT, mean = 0, sd = 1)
+for (t in 2:TT) {# compute values 2 thru TT
+    xx[t] <- xx[t - 1] + ww[t]
+}
+```
+---
+
+# First-order autoregressive (AR-1) models
+
+AR-1 models look like this:
+
+$$X_t = c + \rho X_{t-1} +\epsilon_t$$
+where $X_t$ is the variable of interest (usually abundance or biomass), $c$ is a constant, $\rho$ is an autocorrelation parameter, and $\epsilon_t$ is white noise ( $\epsilon_t ~ N(0, \sigma^2)$ ).
+
+-- 
+You can simulate an AR-1 model in R as follows:
+
+
+---
