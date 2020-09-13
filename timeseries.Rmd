@@ -13,24 +13,6 @@ output:
       countIncrementalSlides: false
 ---
 
-background-image: url(https://upload.wikimedia.org/wikipedia/commons/b/be/Sharingan_triple.svg)
-
-```{r setup, include=FALSE}
-options(htmltools.dir.version = FALSE)
-```
-
-???
-
-Image credit: [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Sharingan_triple.svg)
-
----
-class: center, middle
-
-# xaringan
-
-### /ʃaː.'riŋ.ɡan/
-
----
 class: inverse, center, middle
 
 # Get Started
@@ -45,26 +27,31 @@ Install the **ecofolio** package from [Github](https://github.com/seananderson/e
 devtools::install_github("seananderson/ecofolio")
 ```
 
---
-
-You are recommended to use the [RStudio IDE](https://www.rstudio.com/products/rstudio/), but you do not have to.
-
-- Create a new R Markdown document from the menu `File -> New File -> R Markdown -> From Template -> Ninja Presentation`;<sup>1</sup>
+```{r include=FALSE}
+library(tidyverse)
+```
 
 --
 
-- Click the `Knit` button to compile it;
+This is a cool package by Sean Anderson, fisheries and general genius, which calculates different portfolio measures. 
 
---
+---
 
-- or use the [RStudio Addin](https://rstudio.github.io/rstudioaddins/)<sup>2</sup> "Infinite Moon Reader" to live preview the slides (every time you update and save the Rmd document, the slides will be automatically reloaded in RStudio Viewer.
+# Dataset
 
-.footnote[
-[1] 中文用户请看[这份教程](http://slides.yihui.org/xaringan/zh-CN.html)
+Lily has prepared some LTER fish data, which look like this:
+```{r echo=FALSE, eval=TRUE, tidy=FALSE}
 
-[2] See [#2](https://github.com/yihui/xaringan/issues/2) if you do not see the template or addin in RStudio.
-]
-
+fish <- read.csv(here::here("data","final_six_fished_unfished.csv"))
+fish %>%
+  mutate(fished = recode(fished, 
+                         no = "unfished",
+                          yes = "fished")) %>%
+  ggplot(aes(x = Year, y = Count_m2, colour = Taxonomy)) +
+  geom_line() +
+  facet_wrap(~fished) +
+  theme_classic(base_size = 16)
+```
 ---
 
 # Refresher about time series
@@ -101,6 +88,7 @@ $$X_t = c + \rho X_{t-1} +\epsilon_t$$
 where $X_t$ is the variable of interest (usually abundance or biomass), $c$ is a constant, $\rho$ is an autocorrelation parameter, and $\epsilon_t$ is white noise ( $\epsilon_t ~ N(0, \sigma^2)$ ).
 
 -- 
+
 You can simulate an AR-1 model in R as follows:
 
 
