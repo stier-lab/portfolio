@@ -1,9 +1,9 @@
 ---
 title: "Time series analysis"
-subtitle: "⚔<br/>with ecofolio and MARSS"
+subtitle: "<br/>with ecofolio and MARSS"
 author: "Megsie Siple"
-institute: "Stier Lab @ ucsb"
-date: "2016/12/12 (updated: `r Sys.Date()`)"
+institute: "Stier Lab @ UCSB"
+date: "2020-09-15 (updated: `r Sys.Date()`)"
 output:
   xaringan::moon_reader:
     lib_dir: libs
@@ -13,13 +13,14 @@ output:
       countIncrementalSlides: false
 ---
 
-class: inverse, center, middle
+class: center, middle
 
 # Get Started
 
 ---
 
 # Before we start
+
 
 Install the **ecofolio** package from [Github](https://github.com/seananderson/ecofolio):
 
@@ -33,15 +34,17 @@ library(tidyverse)
 
 --
 
-This is a cool package by Sean Anderson, fisheries and general genius, which calculates different portfolio measures. 
+This is a package by Sean Anderson, fisheries and general genius, which calculates different portfolio measures. The paper to cite for the package (and a good one to read for any portfolio paper) is Anderson et al. 2013<sup>1</sup>. 
 
+.footnote[
+[1] Anderson, S.C., A.B. Cooper, N.K. Dulvy. 2013. Ecological prophets: Quantifying metapopulation portfolio effects. Methods in Ecology and Evolution. In Press. doi: 10.1111/2041-210X.12093.
+]
 ---
 
 # Dataset
 
 Lily has prepared some LTER fish data, which look like this:
 ```{r echo=FALSE, eval=TRUE, tidy=FALSE}
-
 fish <- read.csv(here::here("data","final_six_fished_unfished.csv"))
 fish %>%
   mutate(fished = recode(fished, 
@@ -52,6 +55,128 @@ fish %>%
   facet_wrap(~fished) +
   theme_classic(base_size = 16)
 ```
+---
+
+# Portfolio effects
+
+Portfolio effects come from financial management - the principle is that the variability in returns from investing in a portfolio of assets is lower than the variability 
+in returns from investing in a single asset.
+
+--
+
+With any set of randomly fluctuating time series, the sum of the time series will be more stable (i.e., have a lower CV) than either of the individual time series.
+
+--
+
+Ecologists have applied this principle to:
+
+- Subpopulations of the same species (Schindler et al, Siple & Francis)
+- Species in a multispecies complex
+- Life history types in a single population
+
+---
+
+# An example 
+
+In just the unfished stocks from the LTER dataset, 
+```{r echo=TRUE,include=TRUE}
+cv <- function(x){sd(x)/mean(x)}
+cbinotatus_cv <- fish %>% 
+  filter(Taxonomy == "Ctenochaetus binotatus") %>% 
+  summarize(CV = cv(Count_m2))
+allspecies_cv <- fish %>%
+  filter(fished == "no") %>%
+  group_by(Year) %>%
+  summarize(tot_density = sum(Count_m2)) %>%
+  summarize(CV = cv(tot_density))
+
+cbinotatus_cv; allspecies_cv$CV
+```
+
+---
+
+# How can we quantify the benefit of one additional population?
+
+A portfolio will always be more stable than its individual components. But how much more stable? It is helpful to be able to measure the proportional contribution of one added subpopulation or stock to the portfolio.
+
+--
+
+People usually do this by comparing the CV of the portfolio to the mean of the CVs of the individual assets, i.e., 
+
+$$\frac{(CV_{i=1} + CV_{i=2} + CV_{i=3})/3}{CV_{p}}$$
+
+where $p$ is the portfolio of all the subpopulations $i$.
+
+```{r echo=TRUE,warnings=FALSE}
+# calculate CVs of each "asset" (= species)
+species_cvs <- fish %>%
+  filter(fished == "no") %>%
+  group_by(Taxonomy) %>%
+  summarize(CV = cv(Count_m2))
+mean(species_cvs$CV) / allspecies_cv
+```
+
+---
+
+# Sounds fine
+
+But it's not! Because financial portfolios and ecological portfolios scale differently with asset size/population size.
+
+In **financial portfolios**, as asset size (i.e., population size) increases, its variance increases linearly (if you plotted $log(\mu_i)$ vs $log(\sigma_i)$ for all your assets (`i` is each asset), it would be linear with a slope of z~2) 
+
+--
+
+But in **ecological systems**, as population size increases, variance increases non-linearly according to Taylor's power law
+
+--
+
+## What does this mean for portfolio effects?
+
+If we use the average-CV, we may overestimate the size of the portfolio effect, attributing more stability to the population than is actually added by the presence of multiple subpopulations. Especially if the slope of $log(\mu_i)$ vs $log(\sigma_i)$ is < 2. 
+
+---
+
+# Mean-variance portfolio effect
+
+The mean-variance portfolio effect allows for the non-linearity that we see in ecological systems (i.e., it allows $z$ to be different from 2). 
+
+The mean-variance PE is based on the linear relationship between $log(\mu_i)$ and $log(\sigma_i)$
+
+$$log(\sigma_i^2) = \beta_0 + z \cdot log(\mu_i)+\epsilon_i$$
+The method fits $\beta_0$, $z$, and the variance of $\epsilon_i$. Then you predict a variance $\hat\sigma^2$, given that linear relationship. The PE is measured as  $\hat\sigma^2 - \sigma^2$, where $\sigma^2$ is the observed variance of the whole metapopulation or portfolio. 
+
+---
+
+# The `ecofolio` package
+
+`ecofolio` allows you to quickly calculate PEs by both methods.
+
+## The data have to be in a format where each time series is one column
+
+IMPORTANT: This requires data for every year. I have dealt with this by using a state-space model before, but here we can just do some interpolation thing to be expedient.
+
+```{r}
+library(ecofolio)
+library(zoo) #for interpolation
+fishfr <- fish %>%
+filter(fished == "no") %>%
+  group_by(Taxonomy) %>%
+  mutate(Count_m2_interp = na.approx)
+select(Year, Taxonomy, Count_m2) %>%
+pivot_wider(names_from = Taxonomy, values_from = Count_m2, values_fill = NA) %>%
+as.data.frame()
+
+pe_mv(fishfr[,-1], ci = TRUE)
+pe_avg_cv(fishfr[,-1])
+
+```
+
+---
+
+# Average-CV vs. mean-variance
+
+Insert image of different PEs!
+
 ---
 
 # Refresher about time series
