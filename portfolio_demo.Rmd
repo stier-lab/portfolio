@@ -35,7 +35,7 @@ fish %>%
 
 This requires data for every year. In the past I have dealt with this by using a state-space model to estimate states for every year, but here I just did some interpolation thing with `zoo::na.approx()` for expediency.
 
-```{r}
+```{r echo=FALSE}
 library(zoo) # for filling NAs
 all <- fish %>% 
   filter(fished == "no") %>%
@@ -55,3 +55,19 @@ fishfr <- fish %>%
   as.data.frame()
 
 ```
+
+Now we can calculate portfolio effects for the unfished reef fish:
+
+```{r}
+library(ecofolio)
+pe_avg_cv(fishfr[,-1],ci = TRUE)
+pe_mv(fishfr[,-1],ci = TRUE)
+```
+
+And, to see how much lower the variability is in the group of unfished reef fish, compared to what you would expect from a population of the same size given the mean-variance relationship, 
+
+```{r}
+plot_mv(fishfr[,-1], show = "linear", ci = TRUE)
+```
+
+The distance between the X and the O should be the size of the portfolio effect, but usually X is below the expected variance. So I'm not sure what's happening here. 
