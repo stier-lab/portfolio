@@ -1,0 +1,57 @@
+---
+title: "portfolioexample"
+author: "Megsie"
+date: "9/15/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Portfolio effects
+
+This doc accompnaies the timesseries.Rmd presentation. I had some issues with `xaringan` so I moved the second half of the demo to a Markdown file. 
+
+## Example with LTER fish data
+
+### The data
+
+Lily has prepared some LTER fish data, which look like this:
+```{r echo=FALSE, eval=TRUE, tidy=FALSE}
+fish <- read.csv(here::here("data","final_six_fished_unfished.csv"))
+fish %>%
+  mutate(fished = recode(fished, 
+                         no = "unfished",
+                         yes = "fished")) %>%
+  ggplot(aes(x = Year, y = Count_m2, colour = Taxonomy)) +
+  geom_line() +
+  facet_wrap(~fished) +
+  theme_classic(base_size = 16)
+```
+
+### Portfolio analysis using `ecofolio`
+
+This requires data for every year. In the past I have dealt with this by using a state-space model to estimate states for every year, but here I just did some interpolation thing with `zoo::na.approx()` for expediency.
+
+```{r}
+library(zoo) # for filling NAs
+all <- fish %>% 
+  filter(fished == "no") %>%
+  expand(Taxonomy, Year)
+
+fishfr <- fish %>%
+  filter(fished == "no") %>%
+  right_join(all) %>%
+  arrange(desc(Taxonomy),desc(Year)) %>%
+  group_by(Taxonomy) %>%
+  mutate(interp = na.approx(Count_m2, na.rm = FALSE)) %>% #don't try this at home! not sure if it is recommended for fill in NAs
+  ungroup() %>%
+  select(Year, Taxonomy, interp) %>%
+  pivot_wider(names_from = Taxonomy, values_from = interp) %>%
+  select(-`Ostracion cubicus`) %>% # have to remove this species bc too many missing yrs
+  filter(Year != 2018 & Year != 2006) %>% # years with missing data
+  as.data.frame()
+
+```
