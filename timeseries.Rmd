@@ -1,6 +1,6 @@
 ---
-title: "Time series analysis"
-subtitle: "<br/>with ecofolio and MARSS"
+title: "Portfolio effects"
+subtitle: "<br/>and ecofolio"
 author: "Megsie Siple"
 institute: "Stier Lab @ UCSB"
 date: "2020-09-15 (updated: `r Sys.Date()`)"
@@ -49,7 +49,7 @@ fish <- read.csv(here::here("data","final_six_fished_unfished.csv"))
 fish %>%
   mutate(fished = recode(fished, 
                          no = "unfished",
-                          yes = "fished")) %>%
+                         yes = "fished")) %>%
   ggplot(aes(x = Year, y = Count_m2, colour = Taxonomy)) +
   geom_line() +
   facet_wrap(~fished) +
@@ -59,8 +59,7 @@ fish %>%
 
 # Portfolio effects
 
-Portfolio effects come from financial management - the principle is that the variability in returns from investing in a portfolio of assets is lower than the variability 
-in returns from investing in a single asset.
+Portfolio effects come from financial management - the principle is that the variability in returns from investing in a portfolio of assets is lower than the variability in returns from investing in a single asset.
 
 --
 
@@ -70,9 +69,9 @@ With any set of randomly fluctuating time series, the sum of the time series wil
 
 Ecologists have applied this principle to:
 
-- Subpopulations of the same species (Schindler et al, Siple & Francis)
-- Species in a multispecies complex
-- Life history types in a single population
+- Subpopulations of the same species (Schindler et al. 2015, Siple & Francis 2016)
+- Species in a multispecies complex (with caveats, see later slides)
+- Life history types in a single population 
 
 ---
 
@@ -90,7 +89,7 @@ allspecies_cv <- fish %>%
   summarize(tot_density = sum(Count_m2)) %>%
   summarize(CV = cv(tot_density))
 
-cbinotatus_cv; allspecies_cv$CV
+cat('single species CV: ',cbinotatus_cv$CV, 'whole portfolio CV: ', allspecies_cv$CV)
 ```
 
 ---
@@ -107,22 +106,34 @@ $$\frac{(CV_{i=1} + CV_{i=2} + CV_{i=3})/3}{CV_{p}}$$
 
 where $p$ is the portfolio of all the subpopulations $i$.
 
+---
+
+# How can we quantify the benefit of one additional population?
+
+## Average-CV portfolio effect
+
+For our fish example,
+
 ```{r echo=TRUE,warnings=FALSE}
 # calculate CVs of each "asset" (= species)
 species_cvs <- fish %>%
   filter(fished == "no") %>%
   group_by(Taxonomy) %>%
   summarize(CV = cv(Count_m2))
-mean(species_cvs$CV) / allspecies_cv
+```
+
+The average-CV portfolio effect is:
+```{r}
+mean(species_cvs$CV) / allspecies_cv$CV
 ```
 
 ---
 
-# Sounds fine
+# Which portfolio metric should be used?
 
-But it's not! Because financial portfolios and ecological portfolios scale differently with asset size/population size.
+Financial portfolios and ecological portfolios scale differently with asset size/population size.
 
-In **financial portfolios**, as asset size (i.e., population size) increases, its variance increases linearly (if you plotted $log(\mu_i)$ vs $log(\sigma_i)$ for all your assets (`i` is each asset), it would be linear with a slope of z~2) 
+In **financial portfolios**, as asset size (analogous to population size in our ecological example) increases, its variance increases linearly (if you plotted $log(\mu_i)$ vs $log(\sigma_i)$ for all your assets (`i` is each asset), it would be linear with a slope of $z \approx 2$) 
 
 --
 
@@ -130,9 +141,9 @@ But in **ecological systems**, as population size increases, variance increases 
 
 --
 
-## What does this mean for portfolio effects?
+## How does this impact our PE calculations?
 
-If we use the average-CV, we may overestimate the size of the portfolio effect, attributing more stability to the population than is actually added by the presence of multiple subpopulations. Especially if the slope of $log(\mu_i)$ vs $log(\sigma_i)$ is < 2. 
+If we use the average-CV, we may overestimate the size of the portfolio effect, attributing more stability to the population than is actually added by the presence of multiple subpopulations. Especially if the slope of $log(\mu_i)$ vs $log(\sigma_i)$ is $< 2$. 
 
 ---
 
@@ -151,70 +162,35 @@ The method fits $\beta_0$, $z$, and the variance of $\epsilon_i$. Then you predi
 
 `ecofolio` allows you to quickly calculate PEs by both methods.
 
-## The data have to be in a format where each time series is one column
+The example dataset in `ecofolio` is salmon from different streams. The data are set up so the first column is the time increment and the other columns are abundances or biomass or whatever your ecological asset is.
 
-IMPORTANT: This requires data for every year. I have dealt with this by using a state-space model before, but here we can just do some interpolation thing to be expedient.
-
-```{r}
+```{r echo=FALSE}
 library(ecofolio)
-library(zoo) #for interpolation
-fishfr <- fish %>%
-filter(fished == "no") %>%
-  group_by(Taxonomy) %>%
-  mutate(Count_m2_interp = na.approx)
-select(Year, Taxonomy, Count_m2) %>%
-pivot_wider(names_from = Taxonomy, values_from = Count_m2, values_fill = NA) %>%
-as.data.frame()
-
-pe_mv(fishfr[,-1], ci = TRUE)
-pe_avg_cv(fishfr[,-1])
-
+data(pinkbr)
+head(pinkbr)
 ```
+Yay salmon!
 
 ---
 
-# Average-CV vs. mean-variance
+# The `ecofolio` package cont'd
 
-Insert image of different PEs!
+The package has two functions `pe_mv()` and `pe_avg_cv()`. 
+With the pink salmon data, these are simply:
 
----
-
-# Refresher about time series
-
-There are some time series basics that it helps to know when you're analyzing time series data.
-
-These basics are all included in `stats` so you don't have to download a package. 
-
---- 
-
-
-# Random walk
-
-Random walk models look like this:
-
-$$X_t = X_{t-1}+w_t$$
-
-In R code, this would look like the following:
 ```{r}
-set.seed(123)
-TT <- 100
-xx <- ww <- rnorm(n = TT, mean = 0, sd = 1)
-for (t in 2:TT) {# compute values 2 thru TT
-    xx[t] <- xx[t - 1] + ww[t]
-}
+pe_avg_cv(pinkbr[,-1],ci = TRUE)
+pe_mv(pinkbr[,-1],ci = TRUE)
 ```
----
-
-# First-order autoregressive (AR-1) models
-
-AR-1 models look like this:
-
-$$X_t = c + \rho X_{t-1} +\epsilon_t$$
-where $X_t$ is the variable of interest (usually abundance or biomass), $c$ is a constant, $\rho$ is an autocorrelation parameter, and $\epsilon_t$ is white noise ( $\epsilon_t ~ N(0, \sigma^2)$ ).
-
--- 
-
-You can simulate an AR-1 model in R as follows:
-
 
 ---
+
+# The `ecofolio` package cont'd
+
+You can also use `ecofolio` to plot the relationship between mean and variance.
+
+```{r echo=FALSE,fig.height=5}
+plot_mv(pinkbr[,-1], show = "linear", ci = TRUE)
+```
+
+Now we can try it out with our real-life example.
