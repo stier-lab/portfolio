@@ -1,5 +1,5 @@
 ---
-title: "portfolioexample"
+title: "Portfolio demo with unfished reef fishes"
 author: "Megsie"
 date: "9/15/2020"
 output: html_document
@@ -7,7 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(zoo) # for filling NAs
 library(tidyverse)
+
+# if you need it, ecofolio install:
+#devtools::install_github("seananderson/ecofolio")
 ```
 
 ## Portfolio effects
@@ -36,7 +40,7 @@ fish %>%
 This requires data for every year. In the past I have dealt with this by using a state-space model to estimate states for every year, but here I just did some interpolation thing with `zoo::na.approx()` for expediency.
 
 ```{r echo=FALSE}
-library(zoo) # for filling NAs
+
 all <- fish %>% 
   filter(fished == "no") %>%
   expand(Taxonomy, Year)
@@ -70,4 +74,18 @@ And, to see how much lower the variability is in the group of unfished reef fish
 plot_mv(fishfr[,-1], show = "linear", ci = TRUE)
 ```
 
-The distance between the X and the O should be the size of the portfolio effect, but usually X is below the expected variance. So I'm not sure what's happening here. 
+The distance between the X and the O should be the size of the portfolio effect. Usually the X (observed variance) is below the O (expected variance based on mean-variance relationship) but here it is above. This may be due to synchrony among some of the more abundant reef fish. 
+
+### Synchrony among stocks or species
+There are several ways to quantify synchrony, but `ecofolio` provides one:  `synchrony()` takes a matrix of biomass data (in our case, `fishfr`) and returns the Loreau and de Mazancourt synchrony index^[Loreau, M., & de Mazancourt, C. (2008). Species synchrony and its drivers: Neutral and nonneutral community dynamics in fluctuating environments. American Naturalist, 172(2), E48–E66. https://doi.org/10.1086/589746]:
+
+$$\phi = \frac{\sigma_{T}^2}{(\sum_{i}\sigma_i)^2}  $$
+
+where $T$ is the 'total' (the whole metapopulation), and $\sigma_i^2$ are the individual population variances. For this index, 0 represents perfect asynchrony and 1 represents perfect synchrony.
+
+For the unfished reef fishes in this cleaned-up dataset, this value is:
+```{r}
+synchrony(fishfr[,-1])
+
+```
+You can tell from this value that the populations are pretty synchronous, which makes sense given the predicted vs. observed variances in the plot above. If you want to dig deeper into whether certain species are synchronous or asynchronous with each other, you can use more sophisticated time series models like MARSS, which accounts for autocorrelation and can include things like environmental drivers. More for a later discussion! 
