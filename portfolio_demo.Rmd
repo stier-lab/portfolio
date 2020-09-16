@@ -81,11 +81,11 @@ There are several ways to quantify synchrony, but `ecofolio` provides one:  `syn
 
 $$\phi = \frac{\sigma_{T}^2}{(\sum_{i}\sigma_i)^2}  $$
 
-where $T$ is the 'total' (the whole metapopulation), and $\sigma_i^2$ are the individual population variances. For this index, 0 represents perfect asynchrony and 1 represents perfect synchrony.
+where $T$ is the 'total' (the whole metapopulation, or whole reef fish community in the case of our example), and $\sigma_i^2$ are the individual population variances. For this index, 0 represents perfect asynchrony and 1 represents perfect synchrony.
 
 For the unfished reef fishes in this cleaned-up dataset, this value is:
 ```{r}
 synchrony(fishfr[,-1])
 
 ```
-You can tell from this value that the populations are pretty synchronous, which makes sense given the predicted vs. observed variances in the plot above. If you want to dig deeper into whether certain species are synchronous or asynchronous with each other, you can use more sophisticated time series models like MARSS, which accounts for autocorrelation and can include things like environmental drivers. More for a later discussion! 
+You can tell from this value that the populations are pretty synchronous, which makes sense given the predicted vs. observed variances in the plot above. If you want to dig deeper into whether certain species are synchronous or asynchronous with each other, you can use more sophisticated time series models like MARSS, which accounts for autocorrelation and can include things like environmental drivers. If you were using a MARSS model, you would estimate the off-diagonals of the process error correlation matrix to estimate the degree of synchrony between species (or population components, if that's what you're looking at). More for a later discussion! 
